@@ -1,2 +1,5 @@
 # Jetbrains IDE specific data
 .idea/**
+
+# Jupyter Notebook
+**.ipynb_checkpoints
