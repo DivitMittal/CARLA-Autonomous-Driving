@@ -1,5 +1,5 @@
 # Jetbrains IDE specific data
-.idea/**
+.idea/
 
 # Jupyter Notebook
 **.ipynb_checkpoints
