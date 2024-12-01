@@ -1,16 +1,21 @@
-# Team Zesta - Theme Computer Vision for the ICHack2.0 Phase-2 MUJ 
-## (Problem Statement 2) - Advanced Autonomous Vehicle(AV) Self Driving System
-![image_of_the_project](https://github.com/sanchit-lamba/zesta-ichack-phase2/blob/main/readme_img.png?raw=true)
+<h1 align='center'>Autonomous Vehicle(AV) Self Driving System</h1>
+<div align='center'>
+    <img src='./assets/simulation_preview.png' alt='Preview of the autonomous-driving simulation'/>
+</div>
 ---
-#### Technolgies/Softwares/Non-Standard libraries used: 
-   - CARLA (Open Source AV Simulator)
-   - Keras (To implement Deep Learning Models)
-   - Tensorflow (To train the model weights)
-   - Pygame (To enable the model to imitate human-like input to the simulator)
-   - OpenCV (To fetch and display/manipulate the data collected from virtual senors, videlicet, RGB Camera, LiDAR, Collision Detector)
 
-#### Team Members:
-- [Sanchit Lamba](https://github.com/sanchit-lamba)
-- [Divit Mittal](https://github.com/DivitMittal) 
+#### Technologies/Software/Non-Standard libraries used:
 
-### [Video presentation & a document explaining the implementation with the codebase (Gdrive upload, because of 25MiB size limit on github)](https://drive.google.com/drive/folders/1te0HDyyQaOI47RANxhuFZEUii8KMuGsd?usp=share_link)
+| Technology | Application                           |
+| ---------- | ------------                          |
+| CARLA      | Vehicle Simulator                     |
+| OpenCV     | For data visualization from RGB Camera|
+| Keras      | For deep-learning CNN model           |
+| Tensorflow | Optimizing the model weights          |
+| Pygame     | Manual Control                        |
+
+### CARLA Sensors used:
+Virtual senors, videlicet, RGB Camera, LiDAR, Collision Detector
+
+---
+#### [Video Presentation](https://drive.google.com/drive/folders/1te0HDyyQaOI47RANxhuFZEUii8KMuGsd?usp=share_link)
