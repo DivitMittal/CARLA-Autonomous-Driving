@@ -48,4 +48,4 @@ This project leverages advanced deep learning methodologies to perform semantic 
 | Pygame     | Manual Control                        |
 
 ---
-### TLDR; [Video Presentation](https://drive.google.com/drive/folders/1te0HDyyQaOI47RANxhuFZEUii8KMuGsd?usp=share_link)
+### TL;DR [Video Presentation](https://drive.google.com/drive/folders/1te0HDyyQaOI47RANxhuFZEUii8KMuGsd?usp=share_link)
