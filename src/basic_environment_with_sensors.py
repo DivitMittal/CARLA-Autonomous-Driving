@@ -1,4 +1,4 @@
-import carla
+import carcar as carla
 import argparse
 import random
 import time
