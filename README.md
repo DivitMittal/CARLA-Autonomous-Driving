@@ -1,6 +1,6 @@
 <h1 align='center'>Autonomous Vehicle(AV) Self Driving System</h1>
 <div align='center'>
-    <img src='./assets/simulation_preview.png' alt='Preview of the autonomous-driving simulation'/>
+    <img src='./assets/simulation_preview.png' alt='Preview of the autonomous-driving simulation' title='Simulation'/>
 </div>
 
 ---
