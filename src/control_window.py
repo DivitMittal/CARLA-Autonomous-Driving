@@ -1,13 +1,11 @@
 import carla
 import pygame
 
-client = carla.Client('localhost', 2000)
+client = carla.Client("localhost", 2000)
 client.set_timeout(5.0)
 world = client.get_world()
 world.wait_for_tick()
-actor_list = world.get_actors().filter(
-    '*model3*'
-)
+actor_list = world.get_actors().filter("*model3*")
 vehicle_list = []
 for vehicle in actor_list:
     vehicle_list.append(vehicle)

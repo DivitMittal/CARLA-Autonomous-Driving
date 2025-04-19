@@ -16,7 +16,7 @@ def main():
     YAW_ADJ_DEGREES = 35
     MAX_STEER_ANGLE = 35
 
-    #mount point of camera on the car
+    # mount point of camera on the car
     CAMERA_POS_Z = 1.6
     CAMERA_POS_X = 0.9
 
@@ -26,8 +26,7 @@ def main():
     HEIGHT_REQUIRED_PORTION = 0.4
     WIDTH_REQUIRED_PORTION = 0.5
 
-
-    height_from = int(HEIGHT * (1 -HEIGHT_REQUIRED_PORTION))
+    height_from = int(HEIGHT * (1 - HEIGHT_REQUIRED_PORTION))
     width_from = int((WIDTH - WIDTH * WIDTH_REQUIRED_PORTION) / 2)
     width_to = width_from + int(WIDTH_REQUIRED_PORTION * WIDTH)
 
@@ -39,14 +38,12 @@ def main():
     color = (255, 255, 255)
     thickness = 1
 
-    model = load_model('.\model\lane_model',compile=False)
+    model = load_model(".\model\lane_model", compile=False)
     model.compile()
 
-
-    client = carla.Client('localhost', 2000)
+    client = carla.Client("localhost", 2000)
     client.set_timeout(10)
-    client.load_world('Town05')
-
+    client.load_world("Town05")
 
     world = client.get_world()
 
@@ -58,7 +55,7 @@ def main():
     world.apply_settings(settings)
 
     bp_lib = world.get_blueprint_library()
-    vehicle_bp = bp_lib.filter('*model3*')
+    vehicle_bp = bp_lib.filter("*model3*")
 
     town_map = world.get_map()
 
@@ -66,7 +63,9 @@ def main():
     spawn_points = world.get_map().get_spawn_points()
     good_spawn_points = []
     for point in spawn_points:
-        this_waypoint = world.get_map().get_waypoint(point.location,project_to_road=True, lane_type=(carla.LaneType.Driving))
+        this_waypoint = world.get_map().get_waypoint(
+            point.location, project_to_road=True, lane_type=(carla.LaneType.Driving)
+        )
         if this_waypoint.road_id in good_roads:
             good_spawn_points.append(point)
 
@@ -87,81 +86,108 @@ def main():
         # tweaks for prediction
         img = np.float32(im)
         img_gry = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        img_gry = cv2.resize(img_gry, (WIDTH,HEIGHT))
+        img_gry = cv2.resize(img_gry, (WIDTH, HEIGHT))
         # this version adds taking lower side of the image
-        img_gry = img_gry[height_from:,width_from:width_to]
+        img_gry = img_gry[height_from:, width_from:width_to]
         img_gry = img_gry.astype(np.uint8)
-        canny = cv2.Canny(img_gry,50,150)
+        canny = cv2.Canny(img_gry, 50, 150)
 
-        canny = canny /255
-        input_for_model = canny[ :, :, None]
+        canny = canny / 255
+        input_for_model = canny[:, :, None]
         input_for_model = np.expand_dims(input_for_model, axis=0)
-        angle = model(input_for_model,training=False)
+        angle = model(input_for_model, training=False)
 
-        return  angle.numpy()[0][0] * YAW_ADJ_DEGREES / MAX_STEER_ANGLE
+        return angle.numpy()[0][0] * YAW_ADJ_DEGREES / MAX_STEER_ANGLE
 
+    # setting RGB Camera
+    camera_bp = bp_lib.find("sensor.camera.rgb")
+    camera_bp.set_attribute("image_size_x", "512")
+    camera_bp.set_attribute("image_size_y", "256")
 
+    camera_init_trans = carla.Transform(carla.Location(z=CAMERA_POS_Z, x=CAMERA_POS_X))
+    camera = world.spawn_actor(camera_bp, camera_init_trans, attach_to=vehicle)
 
-    #setting RGB Camera
-    camera_bp = bp_lib.find('sensor.camera.rgb')
-    camera_bp.set_attribute('image_size_x', '512')
-    camera_bp.set_attribute('image_size_y', '256')
+    def camera_callback(image, data_dict):
+        data_dict["image"] = np.reshape(
+            np.copy(image.raw_data), (image.height, image.width, 4)
+        )
 
-    camera_init_trans = carla.Transform(carla.Location(z=CAMERA_POS_Z,x=CAMERA_POS_X))
-    camera = world.spawn_actor(camera_bp,camera_init_trans,attach_to=vehicle)
+    image_w = camera_bp.get_attribute("image_size_x").as_int()
+    image_h = camera_bp.get_attribute("image_size_y").as_int()
 
-    def camera_callback(image,data_dict):
-        data_dict['image'] = np.reshape(np.copy(image.raw_data),(image.height,image.width,4))
+    camera_data = {"image": np.zeros((image_h, image_w, 4))}
+    camera.listen(lambda image: camera_callback(image, camera_data))
 
-    image_w = camera_bp.get_attribute('image_size_x').as_int()
-    image_h = camera_bp.get_attribute('image_size_y').as_int()
-
-    camera_data = {'image': np.zeros((image_h,image_w,4))}
-    camera.listen(lambda image: camera_callback(image,camera_data))
-
-    image = camera_data['image']
+    image = camera_data["image"]
 
     predicted_angle = predict_angle(image)
 
-    image = cv2.putText(image, 'Predicted angle in lane: ', org, font, fontScale, color, thickness, cv2.LINE_AA)
+    image = cv2.putText(
+        image,
+        "Predicted angle in lane: ",
+        org,
+        font,
+        fontScale,
+        color,
+        thickness,
+        cv2.LINE_AA,
+    )
 
     # show main camera
-    cv2.namedWindow('RGB Camera',cv2.WINDOW_AUTOSIZE)
-    cv2.imshow('RGB Camera',image)
+    cv2.namedWindow("RGB Camera", cv2.WINDOW_AUTOSIZE)
+    cv2.imshow("RGB Camera", image)
 
     quit = False
 
     while True:
         # Carla Tick
         world.tick()
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             quit = True
             break
-        image = camera_data['image']
+        image = camera_data["image"]
 
         predicted_angle = predict_angle(image)
-        image = cv2.putText(image, 'Predicted angle in lane: '+str(int(predicted_angle * 90)), org, font, fontScale, color, thickness, cv2.LINE_AA)
+        image = cv2.putText(
+            image,
+            "Predicted angle in lane: " + str(int(predicted_angle * 90)),
+            org,
+            font,
+            fontScale,
+            color,
+            thickness,
+            cv2.LINE_AA,
+        )
         v = vehicle.get_velocity()
         a = vehicle.get_acceleration()
-        speed = round(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2),0)
-        image = cv2.putText(image, 'Speed: '+str(int(speed)), org2, font, fontScale, color, thickness, cv2.LINE_AA)
-        acceleration = round(math.sqrt(a.x**2 + a.y**2 + a.z**2),1)
+        speed = round(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2), 0)
+        image = cv2.putText(
+            image,
+            "Speed: " + str(int(speed)),
+            org2,
+            font,
+            fontScale,
+            color,
+            thickness,
+            cv2.LINE_AA,
+        )
+        acceleration = round(math.sqrt(a.x**2 + a.y**2 + a.z**2), 1)
         estimated_throttle = maintain_speed(speed)
 
-        vehicle.apply_control(carla.VehicleControl(throttle=estimated_throttle, steer=-predicted_angle))
+        vehicle.apply_control(
+            carla.VehicleControl(throttle=estimated_throttle, steer=-predicted_angle)
+        )
 
+        cv2.imshow("RGB Camera", image)
 
-        cv2.imshow('RGB Camera',image)
-
-
-    #clean up
+    # clean up
     cv2.destroyAllWindows()
     camera.stop()
-    for actor in world.get_actors().filter('*vehicle*'):
+    for actor in world.get_actors().filter("*vehicle*"):
         actor.destroy()
-    for sensor in world.get_actors().filter('*sensor*'):
+    for sensor in world.get_actors().filter("*sensor*"):
         sensor.destroy()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

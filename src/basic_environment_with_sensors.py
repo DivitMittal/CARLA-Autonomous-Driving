@@ -5,6 +5,7 @@ import time
 import numpy as np
 import pygame
 
+
 class CustomTimer:
     def __init__(self):
         try:
@@ -15,11 +16,14 @@ class CustomTimer:
     def time(self):
         return self.timer()
 
+
 class DisplayManager:
     def __init__(self, grid_size, window_size):
         pygame.init()
         pygame.font.init()
-        self.display = pygame.display.set_mode(window_size, pygame.HWSURFACE | pygame.DOUBLEBUF)
+        self.display = pygame.display.set_mode(
+            window_size, pygame.HWSURFACE | pygame.DOUBLEBUF
+        )
 
         self.grid_size = grid_size
         self.window_size = window_size
@@ -29,7 +33,10 @@ class DisplayManager:
         return [int(self.window_size[0]), int(self.window_size[1])]
 
     def get_display_size(self):
-        return [int(self.window_size[0]/self.grid_size[1]), int(self.window_size[1]/self.grid_size[0])]
+        return [
+            int(self.window_size[0] / self.grid_size[1]),
+            int(self.window_size[1] / self.grid_size[0]),
+        ]
 
     def get_display_offset(self, gridPos):
         dis_size = self.get_display_size()
@@ -57,8 +64,18 @@ class DisplayManager:
     def render_enabled(self):
         return self.display != None
 
+
 class SensorManager:
-    def __init__(self, world, display_man, sensor_type, transform, attached, sensor_options, display_pos):
+    def __init__(
+        self,
+        world,
+        display_man,
+        sensor_type,
+        transform,
+        attached,
+        sensor_options,
+        display_pos,
+    ):
         self.surface = None
         self.world = world
         self.display_man = display_man
@@ -73,13 +90,13 @@ class SensorManager:
         self.display_man.add_sensor(self)
 
     def init_sensor(self, sensor_type, transform, attached, sensor_options):
-        if sensor_type == 'RGBCamera':
-            camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
+        if sensor_type == "RGBCamera":
+            camera_bp = self.world.get_blueprint_library().find("sensor.camera.rgb")
             disp_size = self.display_man.get_display_size()
             scalar = 1
-            disp_size = [256,256]*scalar
-            camera_bp.set_attribute('image_size_x', str(disp_size[0]))
-            camera_bp.set_attribute('image_size_y', str(disp_size[1]))
+            disp_size = [256, 256] * scalar
+            camera_bp.set_attribute("image_size_x", str(disp_size[0]))
+            camera_bp.set_attribute("image_size_y", str(disp_size[1]))
             for key in sensor_options:
                 camera_bp.set_attribute(key, sensor_options[key])
 
@@ -88,12 +105,21 @@ class SensorManager:
 
             return camera
 
-        elif sensor_type == 'LiDAR':
-            lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
-            lidar_bp.set_attribute('range', '100')
-            lidar_bp.set_attribute('dropoff_general_rate', lidar_bp.get_attribute('dropoff_general_rate').recommended_values[0])
-            lidar_bp.set_attribute('dropoff_intensity_limit', lidar_bp.get_attribute('dropoff_intensity_limit').recommended_values[0])
-            lidar_bp.set_attribute('dropoff_zero_intensity', lidar_bp.get_attribute('dropoff_zero_intensity').recommended_values[0])
+        elif sensor_type == "LiDAR":
+            lidar_bp = self.world.get_blueprint_library().find("sensor.lidar.ray_cast")
+            lidar_bp.set_attribute("range", "100")
+            lidar_bp.set_attribute(
+                "dropoff_general_rate",
+                lidar_bp.get_attribute("dropoff_general_rate").recommended_values[0],
+            )
+            lidar_bp.set_attribute(
+                "dropoff_intensity_limit",
+                lidar_bp.get_attribute("dropoff_intensity_limit").recommended_values[0],
+            )
+            lidar_bp.set_attribute(
+                "dropoff_zero_intensity",
+                lidar_bp.get_attribute("dropoff_zero_intensity").recommended_values[0],
+            )
 
             for key in sensor_options:
                 lidar_bp.set_attribute(key, sensor_options[key])
@@ -104,9 +130,11 @@ class SensorManager:
 
             return lidar
 
-        elif sensor_type == 'SemanticLiDAR':
-            lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast_semantic')
-            lidar_bp.set_attribute('range', '100')
+        elif sensor_type == "SemanticLiDAR":
+            lidar_bp = self.world.get_blueprint_library().find(
+                "sensor.lidar.ray_cast_semantic"
+            )
+            lidar_bp.set_attribute("range", "100")
 
             for key in sensor_options:
                 lidar_bp.set_attribute(key, sensor_options[key])
@@ -118,7 +146,7 @@ class SensorManager:
             return lidar
 
         elif sensor_type == "Radar":
-            radar_bp = self.world.get_blueprint_library().find('sensor.other.radar')
+            radar_bp = self.world.get_blueprint_library().find("sensor.other.radar")
             for key in sensor_options:
                 radar_bp.set_attribute(key, sensor_options[key])
 
@@ -146,16 +174,16 @@ class SensorManager:
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
         t_end = self.timer.time()
-        self.time_processing += (t_end-t_start)
+        self.time_processing += t_end - t_start
         self.tics_processing += 1
 
     def save_lidar_image(self, image):
         t_start = self.timer.time()
 
         disp_size = self.display_man.get_display_size()
-        lidar_range = 2.0*float(self.sensor_options['range'])
+        lidar_range = 2.0 * float(self.sensor_options["range"])
 
-        points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
+        points = np.frombuffer(image.raw_data, dtype=np.dtype("f4"))
         points = np.reshape(points, (int(points.shape[0] / 4), 4))
         lidar_data = np.array(points[:, :2])
         lidar_data *= min(disp_size) / lidar_range
@@ -172,16 +200,16 @@ class SensorManager:
             self.surface = pygame.surfarray.make_surface(lidar_img)
 
         t_end = self.timer.time()
-        self.time_processing += (t_end-t_start)
+        self.time_processing += t_end - t_start
         self.tics_processing += 1
 
     def save_semanticlidar_image(self, image):
         t_start = self.timer.time()
 
         disp_size = self.display_man.get_display_size()
-        lidar_range = 2.0*float(self.sensor_options['range'])
+        lidar_range = 2.0 * float(self.sensor_options["range"])
 
-        points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
+        points = np.frombuffer(image.raw_data, dtype=np.dtype("f4"))
         points = np.reshape(points, (int(points.shape[0] / 6), 6))
         lidar_data = np.array(points[:, :2])
         lidar_data *= min(disp_size) / lidar_range
@@ -198,16 +226,16 @@ class SensorManager:
             self.surface = pygame.surfarray.make_surface(lidar_img)
 
         t_end = self.timer.time()
-        self.time_processing += (t_end-t_start)
+        self.time_processing += t_end - t_start
         self.tics_processing += 1
 
     def save_radar_image(self, radar_data):
         t_start = self.timer.time()
-        points = np.frombuffer(radar_data.raw_data, dtype=np.dtype('f4'))
+        points = np.frombuffer(radar_data.raw_data, dtype=np.dtype("f4"))
         points = np.reshape(points, (len(radar_data), 4))
 
         t_end = self.timer.time()
-        self.time_processing += (t_end-t_start)
+        self.time_processing += t_end - t_start
         self.tics_processing += 1
 
     def render(self):
@@ -217,6 +245,7 @@ class SensorManager:
 
     def destroy(self):
         self.sensor.destroy()
+
 
 def run_simulation(args, client):
     display_manager = None
@@ -252,32 +281,86 @@ def run_simulation(args, client):
 
         # Instantiating the vehicle to which we attached the sensors
         # Using a Tesla Model 3 as our client AV to be controlled
-        vehicle_bp = world.get_blueprint_library().filter('*model3*')[0]
-        vehicle = world.spawn_actor(vehicle_bp, random.choice(world.get_map().get_spawn_points()))
+        vehicle_bp = world.get_blueprint_library().filter("*model3*")[0]
+        vehicle = world.spawn_actor(
+            vehicle_bp, random.choice(world.get_map().get_spawn_points())
+        )
         vehicle_list.append(vehicle)
-
 
         vehicle.set_autopilot(False)
 
         # Display Manager organize all the sensors an its display in a window
-        display_manager = DisplayManager(grid_size=[2, 3], window_size=[args.width, args.height])
+        display_manager = DisplayManager(
+            grid_size=[2, 3], window_size=[args.width, args.height]
+        )
 
-        SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=-90)),
-                      vehicle, {}, display_pos=[0, 0])
-        SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)),
-                      vehicle, {}, display_pos=[0, 1])
-        SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+90)),
-                      vehicle, {}, display_pos=[0, 2])
-        SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=180)),
-                      vehicle, {}, display_pos=[1, 1])
+        SensorManager(
+            world,
+            display_manager,
+            "RGBCamera",
+            carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=-90)),
+            vehicle,
+            {},
+            display_pos=[0, 0],
+        )
+        SensorManager(
+            world,
+            display_manager,
+            "RGBCamera",
+            carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)),
+            vehicle,
+            {},
+            display_pos=[0, 1],
+        )
+        SensorManager(
+            world,
+            display_manager,
+            "RGBCamera",
+            carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+90)),
+            vehicle,
+            {},
+            display_pos=[0, 2],
+        )
+        SensorManager(
+            world,
+            display_manager,
+            "RGBCamera",
+            carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=180)),
+            vehicle,
+            {},
+            display_pos=[1, 1],
+        )
 
-        SensorManager(world, display_manager, 'LiDAR', carla.Transform(carla.Location(x=0, z=2.4)),
-                      vehicle, {'channels' : '64', 'range' : '100',  'points_per_second': '250000', 'rotation_frequency': '20'}, display_pos=[1, 0])
-        SensorManager(world, display_manager, 'SemanticLiDAR', carla.Transform(carla.Location(x=0, z=2.4)),
-                      vehicle, {'channels' : '64', 'range' : '100', 'points_per_second': '100000', 'rotation_frequency': '20'}, display_pos=[1, 2])
+        SensorManager(
+            world,
+            display_manager,
+            "LiDAR",
+            carla.Transform(carla.Location(x=0, z=2.4)),
+            vehicle,
+            {
+                "channels": "64",
+                "range": "100",
+                "points_per_second": "250000",
+                "rotation_frequency": "20",
+            },
+            display_pos=[1, 0],
+        )
+        SensorManager(
+            world,
+            display_manager,
+            "SemanticLiDAR",
+            carla.Transform(carla.Location(x=0, z=2.4)),
+            vehicle,
+            {
+                "channels": "64",
+                "range": "100",
+                "points_per_second": "100000",
+                "rotation_frequency": "20",
+            },
+            display_pos=[1, 2],
+        )
 
-
-        #Simulation loop
+        # Simulation loop
         call_exit = False
         time_init_sim = timer.time()
         while True:
@@ -309,39 +392,40 @@ def run_simulation(args, client):
 
         world.apply_settings(original_settings)
 
+
 def main():
-    argparser = argparse.ArgumentParser(
-        description='Grid of sensors on the our Car')
+    argparser = argparse.ArgumentParser(description="Grid of sensors on the our Car")
     argparser.add_argument(
-        '--host',
-        metavar='H',
-        default='127.0.0.1',
-        help='IP of the host server (default: 127.0.0.1)')
+        "--host",
+        metavar="H",
+        default="127.0.0.1",
+        help="IP of the host server (default: 127.0.0.1)",
+    )
     argparser.add_argument(
-        '-p', '--port',
-        metavar='P',
+        "-p",
+        "--port",
+        metavar="P",
         default=2000,
         type=int,
-        help='TCP port to listen to (default: 2000)')
+        help="TCP port to listen to (default: 2000)",
+    )
     argparser.add_argument(
-        '--sync',
-        action='store_true',
-        help='Synchronous mode execution')
+        "--sync", action="store_true", help="Synchronous mode execution"
+    )
     argparser.add_argument(
-        '--async',
-        dest='sync',
-        action='store_false',
-        help='Asynchronous mode execution')
+        "--async", dest="sync", action="store_false", help="Asynchronous mode execution"
+    )
     argparser.set_defaults(sync=True)
     argparser.add_argument(
-        '--res',
-        metavar='WIDTHxHEIGHT',
-        default='1280x720',
-        help='window resolution (default: 1280x720)')
+        "--res",
+        metavar="WIDTHxHEIGHT",
+        default="1280x720",
+        help="window resolution (default: 1280x720)",
+    )
 
     args = argparser.parse_args()
 
-    args.width, args.height = [int(x) for x in args.res.split('x')]
+    args.width, args.height = [int(x) for x in args.res.split("x")]
 
     try:
         client = carla.Client(args.host, args.port)
@@ -350,8 +434,8 @@ def main():
         run_simulation(args, client)
 
     except KeyboardInterrupt:
-        print('\nKeyboard Interrupt or Cancelled by user')
+        print("\nKeyboard Interrupt or Cancelled by user")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

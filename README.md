@@ -39,13 +39,14 @@ This project leverages advanced deep learning methodologies to perform semantic 
 
 ### Technologies/Software/Non-Standard libraries used:
 
-| Technology | Application                           |
-| ---------- | ------------                          |
-| CARLA      | Vehicle Simulator                     |
-| OpenCV     | For data visualization from RGB Camera|
-| Keras      | For deep-learning CNN model           |
-| Tensorflow | Optimizing the model weights          |
-| Pygame     | Manual Control                        |
+| Technology | Application                            |
+| ---------- | -------------------------------------- |
+| CARLA      | Vehicle Simulator                      |
+| OpenCV     | For data visualization from RGB Camera |
+| Keras      | For deep-learning CNN model            |
+| Tensorflow | Optimizing the model weights           |
+| Pygame     | Manual Control                         |
 
 ---
+
 ### TL;DR [Video Presentation](https://drive.google.com/drive/folders/1te0HDyyQaOI47RANxhuFZEUii8KMuGsd?usp=share_link)
