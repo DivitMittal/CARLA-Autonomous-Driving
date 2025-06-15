@@ -1,110 +1,57 @@
-import carla
-import math
-import time
+"""Autonomous driving with CNN-based lane following.
+
+This script uses a trained convolutional neural network to predict steering
+angles for autonomous lane following in CARLA.
+"""
+import argparse
 import cv2
 import numpy as np
-import random
-import tensorflow as tf
+import carla
 
-from keras.models import load_model
+from .config import (
+    DEFAULT_CARLA_HOST,
+    DEFAULT_CARLA_PORT,
+    CARLA_TIMEOUT_SECONDS,
+    VEHICLE_BLUEPRINT_FILTER,
+    TOWN05_GOOD_ROAD_IDS,
+    DEFAULT_CAMERA_CONFIG,
+)
+from .carla_utils import (
+    create_client,
+    setup_synchronous_mode,
+    spawn_vehicle_on_road,
+    destroy_all_vehicles,
+    destroy_all_sensors,
+)
+from .lane_predictor import (
+    LanePredictor,
+    SpeedController,
+    VehicleMonitor,
+    OverlayRenderer,
+)
 
 
-def main():
-    PREFERRED_SPEED = 60
-    SPEED_THRESHOLD = 5
+MODEL_PATH = "./model/lane_model"
 
-    YAW_ADJ_DEGREES = 35
-    MAX_STEER_ANGLE = 35
 
-    # mount point of camera on the car
-    CAMERA_POS_Z = 1.6
-    CAMERA_POS_X = 0.9
+def setup_camera(world: carla.World, vehicle: carla.Vehicle, camera_config) -> tuple:
+    """Setup and attach RGB camera to vehicle.
 
-    HEIGHT = 360
-    WIDTH = 640
+    Args:
+        world: CARLA world instance.
+        vehicle: Vehicle to attach camera to.
+        camera_config: Camera configuration.
 
-    HEIGHT_REQUIRED_PORTION = 0.4
-    WIDTH_REQUIRED_PORTION = 0.5
+    Returns:
+        Tuple of (camera actor, camera_data dict, image_width, image_height).
+    """
+    camera_bp = world.get_blueprint_library().find("sensor.camera.rgb")
+    camera_bp.set_attribute("image_size_x", str(camera_config.image_size_x))
+    camera_bp.set_attribute("image_size_y", str(camera_config.image_size_y))
 
-    height_from = int(HEIGHT * (1 - HEIGHT_REQUIRED_PORTION))
-    width_from = int((WIDTH - WIDTH * WIDTH_REQUIRED_PORTION) / 2)
-    width_to = width_from + int(WIDTH_REQUIRED_PORTION * WIDTH)
-
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    org = (30, 30)
-    org2 = (30, 50)
-    fontScale = 0.5
-    # white color
-    color = (255, 255, 255)
-    thickness = 1
-
-    model = load_model(".\model\lane_model", compile=False)
-    model.compile()
-
-    client = carla.Client("localhost", 2000)
-    client.set_timeout(10)
-    client.load_world("Town05")
-
-    world = client.get_world()
-
-    traffic_manager = client.get_trafficmanager(8000)
-    settings = world.get_settings()
-    traffic_manager.set_synchronous_mode(True)
-    settings.synchronous_mode = True
-    settings.fixed_delta_seconds = 0.05
-    world.apply_settings(settings)
-
-    bp_lib = world.get_blueprint_library()
-    vehicle_bp = bp_lib.filter("*model3*")
-
-    town_map = world.get_map()
-
-    good_roads = [37]
-    spawn_points = world.get_map().get_spawn_points()
-    good_spawn_points = []
-    for point in spawn_points:
-        this_waypoint = world.get_map().get_waypoint(
-            point.location, project_to_road=True, lane_type=(carla.LaneType.Driving)
-        )
-        if this_waypoint.road_id in good_roads:
-            good_spawn_points.append(point)
-
-    start_point = random.choice(good_spawn_points)
-
-    vehicle = world.try_spawn_actor(vehicle_bp[0], start_point)
-    time.sleep(5)
-
-    def maintain_speed(s):
-        if s >= PREFERRED_SPEED:
-            return 0
-        elif s < PREFERRED_SPEED - SPEED_THRESHOLD:
-            return 0.8
-        else:
-            return 0.3
-
-    def predict_angle(im):
-        # tweaks for prediction
-        img = np.float32(im)
-        img_gry = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        img_gry = cv2.resize(img_gry, (WIDTH, HEIGHT))
-        # this version adds taking lower side of the image
-        img_gry = img_gry[height_from:, width_from:width_to]
-        img_gry = img_gry.astype(np.uint8)
-        canny = cv2.Canny(img_gry, 50, 150)
-
-        canny = canny / 255
-        input_for_model = canny[:, :, None]
-        input_for_model = np.expand_dims(input_for_model, axis=0)
-        angle = model(input_for_model, training=False)
-
-        return angle.numpy()[0][0] * YAW_ADJ_DEGREES / MAX_STEER_ANGLE
-
-    # setting RGB Camera
-    camera_bp = bp_lib.find("sensor.camera.rgb")
-    camera_bp.set_attribute("image_size_x", "512")
-    camera_bp.set_attribute("image_size_y", "256")
-
-    camera_init_trans = carla.Transform(carla.Location(z=CAMERA_POS_Z, x=CAMERA_POS_X))
+    camera_init_trans = carla.Transform(
+        carla.Location(z=camera_config.pos_z, x=camera_config.pos_x)
+    )
     camera = world.spawn_actor(camera_bp, camera_init_trans, attach_to=vehicle)
 
     def camera_callback(image, data_dict):
@@ -112,82 +59,174 @@ def main():
             np.copy(image.raw_data), (image.height, image.width, 4)
         )
 
-    image_w = camera_bp.get_attribute("image_size_x").as_int()
-    image_h = camera_bp.get_attribute("image_size_y").as_int()
+    image_width = camera_bp.get_attribute("image_size_x").as_int()
+    image_height = camera_bp.get_attribute("image_size_y").as_int()
 
-    camera_data = {"image": np.zeros((image_h, image_w, 4))}
+    camera_data = {"image": np.zeros((image_height, image_width, 4))}
     camera.listen(lambda image: camera_callback(image, camera_data))
 
-    image = camera_data["image"]
+    return camera, camera_data
 
-    predicted_angle = predict_angle(image)
 
-    image = cv2.putText(
-        image,
-        "Predicted angle in lane: ",
-        org,
-        font,
-        fontScale,
-        color,
-        thickness,
-        cv2.LINE_AA,
-    )
+def run_autonomous_loop(
+    world: carla.World,
+    vehicle: carla.Vehicle,
+    camera_data: dict,
+    predictor: LanePredictor,
+    speed_controller: SpeedController,
+    monitor: VehicleMonitor,
+    renderer: OverlayRenderer,
+) -> None:
+    """Main autonomous driving loop.
 
-    # show main camera
+    Args:
+        world: CARLA world instance.
+        vehicle: Vehicle to control.
+        camera_data: Dictionary containing camera image data.
+        predictor: Lane predictor instance.
+        speed_controller: Speed controller instance.
+        monitor: Vehicle monitor instance.
+        renderer: Overlay renderer instance.
+    """
     cv2.namedWindow("RGB Camera", cv2.WINDOW_AUTOSIZE)
-    cv2.imshow("RGB Camera", image)
 
-    quit = False
+    # Get initial image
+    image = camera_data["image"]
+    predicted_angle = predictor.predict_angle(image)
+    initial_image = renderer.render_angle(image.copy(), predicted_angle)
+    cv2.imshow("RGB Camera", initial_image)
 
-    while True:
-        # Carla Tick
+    running = True
+    while running:
+        # CARLA Tick
         world.tick()
+
+        # Check for quit key
         if cv2.waitKey(1) == ord("q"):
-            quit = True
+            running = False
             break
+
+        # Get latest camera image
         image = camera_data["image"]
 
-        predicted_angle = predict_angle(image)
-        image = cv2.putText(
-            image,
-            "Predicted angle in lane: " + str(int(predicted_angle * 90)),
-            org,
-            font,
-            fontScale,
-            color,
-            thickness,
-            cv2.LINE_AA,
-        )
-        v = vehicle.get_velocity()
-        a = vehicle.get_acceleration()
-        speed = round(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2), 0)
-        image = cv2.putText(
-            image,
-            "Speed: " + str(int(speed)),
-            org2,
-            font,
-            fontScale,
-            color,
-            thickness,
-            cv2.LINE_AA,
-        )
-        acceleration = round(math.sqrt(a.x**2 + a.y**2 + a.z**2), 1)
-        estimated_throttle = maintain_speed(speed)
+        # Predict steering angle
+        predicted_angle = predictor.predict_angle(image)
 
+        # Get current speed
+        speed = monitor.get_speed_kph(vehicle)
+
+        # Render overlays
+        display_image = renderer.render_angle(image.copy(), predicted_angle)
+        display_image = renderer.render_speed(display_image, speed)
+
+        # Calculate and apply control
+        throttle = speed_controller.calculate_throttle(speed)
         vehicle.apply_control(
-            carla.VehicleControl(throttle=estimated_throttle, steer=-predicted_angle)
+            carla.VehicleControl(throttle=throttle, steer=-predicted_angle)
         )
 
-        cv2.imshow("RGB Camera", image)
+        # Update display
+        cv2.imshow("RGB Camera", display_image)
 
-    # clean up
+    # Cleanup
     cv2.destroyAllWindows()
-    camera.stop()
-    for actor in world.get_actors().filter("*vehicle*"):
-        actor.destroy()
-    for sensor in world.get_actors().filter("*sensor*"):
-        sensor.destroy()
+
+
+def main(args: argparse.Namespace) -> None:
+    """Entry point for autonomous driving script.
+
+    Args:
+        args: Command-line arguments.
+    """
+    # Connect to CARLA and setup world
+    client = create_client(args.host, args.port, CARLA_TIMEOUT_SECONDS)
+
+    if args.town:
+        client.load_world(args.town)
+
+    world = client.get_world()
+    original_settings = setup_synchronous_mode(world, client)
+
+    try:
+        # Spawn vehicle on preferred road
+        vehicle = spawn_vehicle_on_road(
+            world,
+            road_ids=TOWN05_GOOD_ROAD_IDS,
+            filter_pattern=VEHICLE_BLUEPRINT_FILTER,
+            autopilot=False,
+        )
+
+        # Setup camera
+        camera, camera_data = setup_camera(world, vehicle, DEFAULT_CAMERA_CONFIG)
+
+        # Initialize prediction and control components
+        predictor = LanePredictor(args.model)
+        speed_controller = SpeedController()
+        monitor = VehicleMonitor()
+        renderer = OverlayRenderer()
+
+        # Get initial prediction
+        image = camera_data["image"]
+        predicted_angle = predictor.predict_angle(image)
+
+        # Run autonomous driving loop
+        run_autonomous_loop(
+            world,
+            vehicle,
+            camera_data,
+            predictor,
+            speed_controller,
+            monitor,
+            renderer,
+        )
+
+    finally:
+        # Cleanup resources
+        cv2.destroyAllWindows()
+
+        if camera:
+            camera.stop()
+
+        destroy_all_sensors(world)
+        destroy_all_vehicles(world)
+
+        world.apply_settings(original_settings)
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    argparser = argparse.ArgumentParser(
+        description="Autonomous driving with CNN lane following"
+    )
+    argparser.add_argument(
+        "--host",
+        metavar="H",
+        default=DEFAULT_CARLA_HOST,
+        help=f"IP of the host server (default: {DEFAULT_CARLA_HOST})",
+    )
+    argparser.add_argument(
+        "-p",
+        "--port",
+        metavar="P",
+        default=DEFAULT_CARLA_PORT,
+        type=int,
+        help=f"TCP port to listen to (default: {DEFAULT_CARLA_PORT})",
+    )
+    argparser.add_argument(
+        "--model",
+        metavar="PATH",
+        default=MODEL_PATH,
+        help=f"Path to trained model (default: {MODEL_PATH})",
+    )
+    argparser.add_argument(
+        "--town",
+        metavar="NAME",
+        default=None,
+        help="CARLA town/map to load (default: current map)",
+    )
+
+    return argparser.parse_args()
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_args())
