@@ -23,8 +23,11 @@
           inherit
             (pkgs)
             ### LSPs & Formatters
+            ## Nix
             nixd
             alejandra
+            ## Python
+            black
             ;
         };
       };
