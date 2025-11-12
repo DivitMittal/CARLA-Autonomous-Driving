@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "CARLA Autonomous Driving System"
+abstract: >
+  An autonomous vehicle self-driving system leveraging the CARLA simulator
+  with deep learning for semantic segmentation. The system integrates
+  multi-modal sensors (RGBA cameras and LiDAR) to enhance perception
+  capabilities and implements state-of-the-art algorithms for perception,
+  planning, and control in realistic driving scenarios.
+authors:
+  - given-names: Divit
+    family-names: Mittal
+    email: 64.69.76.69.74.m@gmail.com
+repository-code: "https://github.com/DivitMittal/CARLA-Autonomous-Driving"
+url: "https://github.com/DivitMittal/CARLA-Autonomous-Driving"
+license: MIT
+keywords:
+  - autonomous-driving
+  - carla-simulator
+  - semantic-segmentation
+  - deep-learning
+  - lidar
+  - computer-vision
+  - self-driving-cars
+  - sensor-fusion
+  - cnn
+  - tensorflow
+date-released: "2024-12-01"
+version: "1.0.0"
