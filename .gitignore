@@ -11,3 +11,8 @@ result-*
 
 ## git pre-commit hooks (handled via cachix/git-hooks)
 .pre-commit-config.yaml
+
+## Tools
+.claude*
+.mcp*
+Claude.md
