@@ -1,8 +1,10 @@
 jobs:
-  checking-flake:
+  locking-flake:
     permissions:
       contents: write
       id-token: write
+      issues: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -13,22 +15,10 @@ jobs:
     - uses: DeterminateSystems/nix-installer-action@v19
     - name: Magic Nix Cache(Use GitHub Actions Cache)
       uses: DeterminateSystems/magic-nix-cache-action@main
-    - name: Run nix flake check
-      run: nix -vL flake check --impure --all-systems --no-build
+    - name: Update flake.lock
+      uses: DeterminateSystems/update-flake-lock@main
     timeout-minutes: 30
 'on':
-  pull_request:
-    branches:
-    - main
-    paths:
-    - flake.nix
-    - flake.lock
-    - flake/**
-  push:
-    branches:
-    - main
-    paths:
-    - flake.nix
-    - flake.lock
-    - flake/**
+  schedule:
+  - cron: 0 0 * * 0
   workflow_dispatch: {}
