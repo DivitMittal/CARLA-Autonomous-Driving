@@ -1,4 +1,12 @@
 <h1 align='center'>Autonomous Vehicle(AV) Self Driving System</h1>
+
+<div align='center'>
+
+![Nix Flake Check](https://github.com/DivitMittal/CARLA-Autonomous-Driving/actions/workflows/flake-check.yml/badge.svg)
+![Nix Flake Lock Update](https://github.com/DivitMittal/CARLA-Autonomous-Driving/actions/workflows/flake-lock-update.yml/badge.svg)
+
+</div>
+
 <div align='center'>
     <img src='./assets/simulation_preview.png' alt='Preview of the autonomous-driving simulation' title='Simulation'/>
 </div>
