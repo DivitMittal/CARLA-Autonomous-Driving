@@ -17,3 +17,6 @@ result-*
 .mcp*
 AGENTS.md
 .serena*
+
+## git worktrees kept inside the project directory
+.worktrees/
